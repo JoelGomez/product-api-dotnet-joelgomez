@@ -47,4 +47,67 @@ public class ProductsController : ControllerBase
     {
         return Products;
     }
+
+    [HttpGet("{id}", Name = "GetProductById")]
+    public ActionResult<Product> Get(int id)
+    {
+        var product = Products.FirstOrDefault(p => p.Id == id);
+        if (product == null)
+        {
+            return NotFound();
+        }
+
+        return product;
+    }
+
+    [HttpPost(Name = "CreateProduct")]
+    public ActionResult<Product> Post([FromBody] Product newProduct)
+    {
+        if (newProduct == null)
+        {
+            return BadRequest("Product cannot be null");
+        }
+
+        newProduct.Id = Products.Max(p => p.Id) + 1;
+
+        Products.Add(newProduct);
+
+        return CreatedAtRoute("GetProductById", new { id = newProduct.Id }, newProduct);
+    }
+
+    [HttpPut("{id}", Name = "UpdateProductById")]
+    public ActionResult<Product> Put(int id, [FromBody] Product UpdateProductById)
+    {
+        if (UpdateProductById == null)
+        {
+            return BadRequest("Product cannot be null");
+        }
+
+        var product = Products.FirstOrDefault(p => p.Id == id);
+        if (product == null)
+        {
+            return NotFound();
+        }
+
+        product.Price = UpdateProductById.Price;
+        product.Name = UpdateProductById.Name;
+        product.Stock = UpdateProductById.Stock;
+        product.Active = UpdateProductById.Active;
+
+        return Ok(existingProduct);
+    }
+
+    [HttpDelete("{id}", Name = "DeleteProductById")]
+    public ActionResult<Product> Delete(int id)
+    {
+        var product = Products.FirstOrDefault(p => p.Id == id);
+        if (product == null)
+        {
+            return NotFound();
+        }
+
+        Products.Remove(product);
+
+        return Ok(product);
+    }
 }
