@@ -1,5 +1,7 @@
+using api_restfull_net8.Data;
 using api_restfull_net8.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace api_restfull_net8.Controllers;
 
@@ -7,107 +9,76 @@ namespace api_restfull_net8.Controllers;
 [Route("[controller]")]
 public class ProductsController : ControllerBase
 {
-    private static readonly List<Product> Products = new()
-    {
-        new Product
-        {
-            Id = 1,
-            Name = "Product 1",
-            Price = 10.0,
-            Stock = 100,
-            Active = true,
-        },
-        new Product
-        {
-            Id = 2,
-            Name = "Product 2",
-            Price = 20.0,
-            Stock = 200,
-            Active = true,
-        },
-        new Product
-        {
-            Id = 3,
-            Name = "Product 3",
-            Price = 30.0,
-            Stock = 300,
-            Active = true,
-        },
-    };
+    private readonly AppDbContext _context;
 
-    private readonly ILogger<ProductsController> _logger;
-
-    public ProductsController(ILogger<ProductsController> logger)
+    public ProductsController(AppDbContext context)
     {
-        _logger = logger;
+        _context = context;
     }
 
     [HttpGet(Name = "GetProducts")]
-    public IEnumerable<Product> Get()
+    public async Task<ActionResult<IEnumerable<Product>>> Get()
     {
-        return Products;
+        return await _context.Products.ToListAsync();
     }
 
     [HttpGet("{id}", Name = "GetProductById")]
-    public ActionResult<Product> Get(int id)
+    public async Task<ActionResult<Product>> Get(int id)
     {
-        var product = Products.FirstOrDefault(p => p.Id == id);
+        var product = await _context.Products.FindAsync(id);
         if (product == null)
         {
             return NotFound();
         }
-
         return product;
     }
 
     [HttpPost(Name = "CreateProduct")]
-    public ActionResult<Product> Post([FromBody] Product newProduct)
+    public async Task<ActionResult<Product>> Post([FromBody] Product product)
     {
-        if (newProduct == null)
-        {
-            return BadRequest("Product cannot be null");
-        }
-
-        newProduct.Id = Products.Max(p => p.Id) + 1;
-
-        Products.Add(newProduct);
-
-        return CreatedAtRoute("GetProductById", new { id = newProduct.Id }, newProduct);
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+        return CreatedAtRoute("GetProductById", new { id = product.Id }, product);
     }
 
     [HttpPut("{id}", Name = "UpdateProductById")]
-    public ActionResult<Product> Put(int id, [FromBody] Product UpdateProductById)
+    public async Task<ActionResult> Put(int id, [FromBody] Product product)
     {
-        if (UpdateProductById == null)
+        if (id != product.Id)
         {
-            return BadRequest("Product cannot be null");
+            return BadRequest("Product ID mismatch.");
         }
 
-        var product = Products.FirstOrDefault(p => p.Id == id);
-        if (product == null)
+        _context.Entry(product).State = EntityState.Modified;
+
+        try
         {
-            return NotFound();
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!_context.Products.Any(p => p.Id == id))
+            {
+                return NotFound();
+            }
+            throw;
         }
 
-        product.Price = UpdateProductById.Price;
-        product.Name = UpdateProductById.Name;
-        product.Stock = UpdateProductById.Stock;
-        product.Active = UpdateProductById.Active;
-
-        return Ok(existingProduct);
+        return NoContent();
     }
 
     [HttpDelete("{id}", Name = "DeleteProductById")]
-    public ActionResult<Product> Delete(int id)
+    public async Task<ActionResult> Delete(int id)
     {
-        var product = Products.FirstOrDefault(p => p.Id == id);
+        var product = await _context.Products.FindAsync(id);
         if (product == null)
         {
             return NotFound();
         }
 
-        Products.Remove(product);
+        _context.Products.Remove(product);
+        await _context.SaveChangesAsync();
 
-        return Ok(product);
+        return NoContent();
     }
 }
