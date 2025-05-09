@@ -1,4 +1,4 @@
-namespace webapi_net8.Models;
+namespace api_restfull_net8.Models;
 
 public class ProductReadDto
 {

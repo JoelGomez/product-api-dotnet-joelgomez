@@ -3,7 +3,7 @@ using api_restfull_net8.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace api_restfull_net8.Controllers;
+namespace webapi_net8.Controllers;
 
 [ApiController]
 [Route("[controller]")]
@@ -16,29 +16,68 @@ public class ProductsController : ControllerBase
         _context = context;
     }
 
+    //GET: /products
+    //GET: /products/{id}
+    //POST: /products
+    //PUT: /products/{id}
+    //DELETE: /products/{id}
+
     [HttpGet(Name = "GetProducts")]
-    public async Task<ActionResult<IEnumerable<Product>>> Get()
+    public async Task<ActionResult<IEnumerable<ProductReadDto>>> Get()
     {
-        return await _context.Products.ToListAsync();
+        var products = await _context.Products.ToListAsync();
+
+        var productDtos = products.Select(p => new ProductReadDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Price = p.Price,
+        });
+
+        return Ok(productDtos);
     }
 
     [HttpGet("{id}", Name = "GetProductById")]
-    public async Task<ActionResult<Product>> Get(int id)
+    public async Task<ActionResult<ProductReadDto>> Get(int id)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null)
         {
             return NotFound();
         }
-        return product;
+
+        var productDto = new ProductReadDto
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Price = product.Price,
+        };
+
+        return Ok(productDto);
     }
 
     [HttpPost(Name = "CreateProduct")]
-    public async Task<ActionResult<Product>> Post([FromBody] Product product)
+    public async Task<ActionResult<ProductReadDto>> Post([FromBody] ProductCreateDto productDto)
     {
+        var product = new Product
+        {
+            Name = productDto.Name,
+            Price = productDto.Price,
+            Stock = productDto.Stock,
+            Active = productDto.Active,
+        };
+
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
-        return CreatedAtRoute("GetProductById", new { id = product.Id }, product);
+
+        var ProductReadDto = new ProductReadDto
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Price = product.Price,
+        };
+
+        return CreatedAtRoute("GetProductById", new { id = product.Id }, ProductReadDto);
     }
 
     [HttpPut("{id}", Name = "UpdateProductById")]
@@ -46,7 +85,7 @@ public class ProductsController : ControllerBase
     {
         if (id != product.Id)
         {
-            return BadRequest("Product ID mismatch.");
+            return BadRequest("Product ID mismatch");
         }
 
         _context.Entry(product).State = EntityState.Modified;
@@ -61,10 +100,12 @@ public class ProductsController : ControllerBase
             {
                 return NotFound();
             }
-            throw;
+            else
+            {
+                throw;
+            }
         }
-
-        return NoContent();
+        return Ok("Product updated successfully");
     }
 
     [HttpDelete("{id}", Name = "DeleteProductById")]
@@ -78,7 +119,6 @@ public class ProductsController : ControllerBase
 
         _context.Products.Remove(product);
         await _context.SaveChangesAsync();
-
-        return NoContent();
+        return Ok("Product deleted successfully");
     }
 }
