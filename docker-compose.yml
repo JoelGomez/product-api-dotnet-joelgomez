@@ -1,0 +1,30 @@
+# SQL server and WebAPI service
+# This docker-compose file sets up a SQL Server and a WebAPI service
+services:
+  sql-server:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sql-server
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YukiYoNoMatoUnaMoshka**
+    ports:
+      - "1433:1433"
+    networks:
+      - webnet
+  webapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webapi
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+    ports:
+      - "5024:5024"
+    depends_on:
+      - sql-server
+    networks:
+      - webnet
+
+networks:
+  webnet:
